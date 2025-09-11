@@ -13,8 +13,8 @@ COPY . .
 
 RUN pip install --upgrade pip
 
-# Install prebuilt dlib + face_recognition
-RUN pip install dlib-bin==19.24.4
+# Install prebuilt dlib (latest version) + face_recognition + flask
+RUN pip install dlib-bin==19.24.6
 RUN pip install face_recognition flask
 
 CMD ["python", "app.py"]
