@@ -1,69 +1,73 @@
 from flask import Flask, request, jsonify
 from ultralytics import YOLO
-import os
 import cv2
+import numpy as np
 
 app = Flask(__name__)
 
+# Load YOLO model ONCE at startup for speed
+MODEL_PATH = "best.pt"  # replace with your trained model path
+model = YOLO(MODEL_PATH)
+
 @app.route('/')
 def hello():
-    return "Hello from Flask inside Docker on Render !"
+    return "Hello from Flask!"
 
-@app.route('/getme')
-def sayhi():
-    return "HIIIII"
-
-@app.route('/predictGlass')
+@app.route("/predictGlass", methods=["POST"])
 def predictGlass():
-    # Read query parameters
-    image_path = request.args.get("image")
-    model_path = request.args.get("model")
-    output_image_path = request.args.get("output", "output.jpg")
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
 
-    if not image_path or not model_path:
-        return jsonify({"error": "Missing 'image' or 'model' query parameter"}), 400
+    # Read uploaded file
+    file = request.files["file"]
+    img_bytes = file.read()
 
-    # Check if image exists
-    if not os.path.exists(image_path):
-        return jsonify({"error": "Image not found"}), 404
+    # Convert to OpenCV image
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    # Load YOLO model
-    model = YOLO(model_path)
+    if img is None:
+        return jsonify({"error": "Failed to read image"}), 400
 
-    # Run inference
-    results = model(image_path, conf=0.7)
-    img = cv2.imread(image_path)
+    # Run YOLO inference
+    results = model(img, conf=0.7)
+
     glasses_worn = False
-    confi = 0.0
+    detections = []
 
+    # Draw boxes and store detection info
     for r in results:
         for box in r.boxes:
             cls = int(box.cls[0])
             class_name = model.names[cls]
-            confi = float(box.conf[0])
+            confidence = float(box.conf[0])
             x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-            if class_name.lower() == "with class":  # <-- replace with your trained class name
+            # Decide box color
+            color = (0, 255, 0) if class_name.lower() == "with class" else (0, 0, 255)
+            if class_name.lower() == "with class":
                 glasses_worn = True
-                color = (0, 255, 0)
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(img, f"{class_name} {confi:.2f}", (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-            else:
-                color = (0, 0, 255)
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(img, f"{class_name} {confi:.2f}", (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
-    # Save output image
-    #cv2.imwrite(output_image_path, img)
+            # Draw rectangle and label
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(img, f"{class_name} {confidence:.2f}", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
-    # Return JSON response
+            # Save detection info
+            detections.append({
+                "class": class_name,
+                "confidence": confidence,
+                "bbox": [x1, y1, x2, y2]
+            })
+
+    # Optionally, encode image to return as base64 (for React to show)
+    # _, buffer = cv2.imencode('.jpg', img)
+    # img_base64 = base64.b64encode(buffer).decode('utf-8')
+
     return jsonify({
-        #"image": os.path.basename(image_path),
         "glasses_worn": glasses_worn,
-        "confidence": confi,
-        #"output_image": output_image_path
+        "detections": detections,
+        # "image": img_base64  # uncomment if you want image in response
     })
 
 
