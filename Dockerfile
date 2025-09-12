@@ -1,24 +1,24 @@
 # Use lightweight Python base
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies (required for cv2 + Ultralytics)
+# Install system deps (needed for cv2 & ultralytics)
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy your application files
-COPY . .
+# Copy only requirements first (so Docker caches deps if unchanged)
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir ultralytics opencv-python-headless flask
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port (for Flask or FastAPI app)
+# Now copy your app code
+COPY . .
+
 EXPOSE 5000
 
-# Run app
 CMD ["python", "app.py"]
