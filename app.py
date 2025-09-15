@@ -15,64 +15,59 @@ def hello():
 
 @app.route("/predictGlass", methods=["POST"])
 def predictGlass():
-    print("📩 Request received at /predictGlass")
-    print("Request files:", request.files)
-    #return jsonify({"message": "predictGlass api called "}), 400
-    if "file" not in request.files:
-        return jsonify({"message": "No file uploaded"}), 400
+    try:
+        print("Request received at /predictGlass")
+        if "file" not in request.files:
+            return jsonify({"message": "No file uploaded"}), 400
 
-    # Read uploaded file
-    file = request.files["file"]
-    img_bytes = file.read()
+        file = request.files["file"]
+        print("Uploaded filename:", file.filename)
+        img_bytes = file.read()
 
-    # Convert to OpenCV image
-    np_arr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        # Convert to OpenCV image
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    if img is None:
-        return jsonify({"message": "Failed to read image"}), 400
+        if img is None:
+            print("Failed to decode image")
+            return jsonify({"message": "Failed to read image"}), 400
 
-    # Run YOLO inference
-    results = model(img, conf=0.7)
+        # Run YOLO
+        print("Running YOLO inference...")
+        results = model(img, conf=0.7)
 
-    glasses_worn = False
-    detections = []
+        glasses_worn = False
+        detections = []
 
-    # Draw boxes and store detection info
-    for r in results:
-        for box in r.boxes:
-            cls = int(box.cls[0])
-            class_name = model.names[cls]
-            confidence = float(box.conf[0])
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
+        for r in results:
+            for box in r.boxes:
+                cls = int(box.cls[0])
+                class_name = model.names[cls]
+                confidence = float(box.conf[0])
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-            # Decide box color
-            color = (0, 255, 0) if class_name.lower() == "with class" else (0, 0, 255)
-            if class_name.lower() == "with class":
-                glasses_worn = True
+                if class_name.lower() == "with class":
+                    glasses_worn = True
 
-            # Draw rectangle and label
-            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(img, f"{class_name} {confidence:.2f}", (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                detections.append({
+                    "class": class_name,
+                    "confidence": confidence,
+                    "bbox": [x1, y1, x2, y2]
+                })
 
-            # Save detection info
-            detections.append({
-                "class": class_name,
-                "confidence": confidence,
-                "bbox": [x1, y1, x2, y2]
-            })
+        print("Detection complete")
+        return jsonify({
+            "glasses_worn": glasses_worn,
+            "detections": detections,
+            "message": "Detection complete"
+        })
 
-    # Optionally, encode image to return as base64 (for React to show)
-    # _, buffer = cv2.imencode('.jpg', img)
-    # img_base64 = base64.b64encode(buffer).decode('utf-8')
+    except Exception as e:
+        import traceback
+        print("ERROR:", str(e))
+        traceback.print_exc()
+        return jsonify({"message": str(e)}), 500
 
-    return jsonify({
-        "glasses_worn": glasses_worn,
-        "detections": detections,
-        "message":"detect glass api"
-        # "image": img_base64  # uncomment if you want image in response
-    })
 
 
 if __name__ == '__main__':
