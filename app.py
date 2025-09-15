@@ -17,7 +17,7 @@ def hello():
 def predictGlass():
     return jsonify({"message": "predictGlass api called "}), 400
     if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+        return jsonify({"message": "No file uploaded"}), 400
 
     # Read uploaded file
     file = request.files["file"]
@@ -28,7 +28,7 @@ def predictGlass():
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
     if img is None:
-        return jsonify({"error": "Failed to read image"}), 400
+        return jsonify({"message": "Failed to read image"}), 400
 
     # Run YOLO inference
     results = model(img, conf=0.7)
@@ -68,6 +68,7 @@ def predictGlass():
     return jsonify({
         "glasses_worn": glasses_worn,
         "detections": detections,
+        "message":"detect glass api"
         # "image": img_base64  # uncomment if you want image in response
     })
 
