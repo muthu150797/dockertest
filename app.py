@@ -55,7 +55,7 @@ def predictGlass():
                     "bbox": [x1, y1, x2, y2]
                 })
 
-        print("Detection complete")
+        print("Detection complete",detections)
         return jsonify({
             "glasses_worn": glasses_worn,
             "detections": detections,
