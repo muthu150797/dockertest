@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify
 from ultralytics import YOLO
 import cv2
 import numpy as np
-
+from flask_cors import CORS
 app = Flask(__name__)
-
+CORS(app)
 # Load YOLO model ONCE at startup for speed
 MODEL_PATH = "best.pt"  # replace with your trained model path
 model = YOLO(MODEL_PATH)
