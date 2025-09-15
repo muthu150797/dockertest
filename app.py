@@ -15,7 +15,9 @@ def hello():
 
 @app.route("/predictGlass", methods=["POST"])
 def predictGlass():
-    return jsonify({"message": "predictGlass api called "}), 400
+    print("📩 Request received at /predictGlass")
+    print("Request files:", request.files)
+    #return jsonify({"message": "predictGlass api called "}), 400
     if "file" not in request.files:
         return jsonify({"message": "No file uploaded"}), 400
 
