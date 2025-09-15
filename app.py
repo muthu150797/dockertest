@@ -59,7 +59,7 @@ def predictGlass():
         return jsonify({
             "glasses_worn": glasses_worn,
             "detections": detections,
-            "message": "Detection complete"
+            "message": "Detection complete00"
         })
 
     except Exception as e:
