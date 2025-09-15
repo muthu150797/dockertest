@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from ultralytics import YOLO
 import cv2
+import base64
 import numpy as np
 from flask_cors import CORS
 app = Flask(__name__)
@@ -27,6 +28,8 @@ def predictGlass():
         # Convert to OpenCV image
         np_arr = np.frombuffer(img_bytes, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        _, buffer = cv2.imencode(".jpg", img)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")       
 
         if img is None:
             print("Failed to decode image")
@@ -52,21 +55,23 @@ def predictGlass():
                 detections.append({
                     "class": class_name,
                     "confidence": confidence,
-                    "bbox": [x1, y1, x2, y2]
+                    "bbox": [x1, y1, x2, y2],
+                    "imageAsBase64":img_base64
                 })
 
         print("Detection complete",detections)
         return jsonify({
+            "status":200,
             "glasses_worn": glasses_worn,
             "detections": detections,
-            "message": "Detection complete00"
+            "message": "Detection completed successfully"
         })
 
     except Exception as e:
         import traceback
         print("ERROR:", str(e))
         traceback.print_exc()
-        return jsonify({"message": str(e)}), 500
+        return jsonify({"status":400,"message": str(e)})
 
 
 
