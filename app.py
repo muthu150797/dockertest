@@ -28,8 +28,6 @@ def predictGlass():
         # Convert to OpenCV image
         np_arr = np.frombuffer(img_bytes, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        _, buffer = cv2.imencode(".jpg", img)
-        img_base64 = base64.b64encode(buffer).decode("utf-8")       
 
         if img is None:
             print("Failed to decode image")
@@ -51,7 +49,18 @@ def predictGlass():
 
                 if class_name.lower() == "with class":
                     glasses_worn = True
-
+                
+                 #Draw rectangle + label on image
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box
+                cv2.putText(
+                    img, f"{class_name} {confidence:.2f}",
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (0, 255, 0), 2
+                )
+                #Convert final annotated image to base64
+                _, buffer = cv2.imencode(".jpg", img)
+                img_base64 = base64.b64encode(buffer).decode("utf-8")
                 detections.append({
                     "class": class_name,
                     "confidence": confidence,
@@ -59,6 +68,8 @@ def predictGlass():
                     "imageAsBase64":img_base64
                 })
 
+        
+        
         print("Detection complete",detections)
         return jsonify({
             "status":200,
